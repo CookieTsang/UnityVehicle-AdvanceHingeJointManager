@@ -1,0 +1,110 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AdvanceHingeJointManager : MonoBehaviour
+{
+    [System.Serializable]
+    public class ControlledHingeJoint
+    {
+        public bool isClose = true;
+        public HingeJoint joint;               // 铰链关节组件
+        public KeyCode clockwiseKey;           // 顺时针旋转按键
+        public KeyCode counterClockwiseKey;    // 逆时针旋转按键
+        public KeyCode singleCtrlKey;           // 顺时针旋转按键
+        public float individualForce = 50f;    // 单独控制时的力
+        public float motorSpeed = 50f;         // 单独控制时的速度
+    }
+
+    public List<ControlledHingeJoint> controlledJoints = new List<ControlledHingeJoint>();
+    void Start()  
+    {  
+       SetAllJoints(-50f, 50f); // 反转，50 力度
+
+    }  
+
+    void Update()
+    {
+        // 处理每个关节的独立按键控制
+        foreach (var cj in controlledJoints)
+        {   
+            if (cj.joint == null) continue;
+
+            if (cj.isClose == true)
+            {
+               if (Input.GetKeyDown(cj.singleCtrlKey))
+                {
+                        SetJointMotor(cj.joint, cj.motorSpeed, cj.individualForce);
+                        cj.isClose = false;
+                } 
+            }
+            else if (cj.isClose == false)
+            {
+                if (Input.GetKeyDown(cj.singleCtrlKey))
+                {
+                        SetJointMotor(cj.joint, -cj.motorSpeed, cj.individualForce);
+                        cj.isClose = true;
+                }
+            }
+      
+
+            if (Input.GetKeyDown(cj.clockwiseKey))
+            {
+                SetJointMotor(cj.joint, cj.motorSpeed, cj.individualForce);
+            }
+            else if (Input.GetKeyDown(cj.counterClockwiseKey))
+            {
+                SetJointMotor(cj.joint, -cj.motorSpeed, cj.individualForce);
+            }
+        }
+
+        // 处理全局控制按键
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            SetAllJoints(50f, 10f);  // 正转，10 力度
+        }
+        else if (Input.GetKeyDown(KeyCode.P))
+        {
+            SetAllJoints(-50f, 50f); // 反转，50 力度
+        }
+
+        ValidateJoints(); // 验证关节有效性
+    }
+
+    void SetJointMotor(HingeJoint joint, float velocity, float force)
+    {
+        JointMotor motor = joint.motor;
+        motor.targetVelocity = velocity;
+        motor.force = force;
+        joint.motor = motor;
+        joint.useMotor = true;
+    }
+
+    void SetAllJoints(float velocity, float force)
+    {
+        foreach (var cj in controlledJoints)
+        {
+            if (cj.joint != null)
+            {
+                SetJointMotor(cj.joint, velocity, force);
+            }
+        }
+    }
+
+    void ValidateJoints()
+    {
+        // 移除所有无效的关节引用
+        controlledJoints.RemoveAll(cj => cj.joint == null);
+    }
+
+    public void DisableAllMotors()
+    {
+        foreach (var cj in controlledJoints)
+        {
+            if (cj.joint != null)
+            {
+                cj.joint.useMotor = false;
+            }
+        }
+    }
+}
